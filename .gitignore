@@ -1,0 +1,10 @@
+db.sqlite3
+__pycache__/
+.env.app.prod
+.env.postgres.prod
+app/staticfiles
+app/mediafiles
+shape_predictor_68_face_landmarks.dat
+tmp/
+*.pem
+*.mp4

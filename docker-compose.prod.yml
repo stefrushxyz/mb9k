@@ -1,0 +1,55 @@
+version: "3"
+services:
+  app:
+    build: ./app
+    command: gunicorn mb9k.wsgi:application --bind 0.0.0.0:8000
+    volumes:
+      - static:/mb9k/staticfiles
+      - media:/mb9k/mediafiles
+    expose: 
+      - 8000
+    env_file:
+      - ./.env.app.prod
+    depends_on:
+      - postgres
+      - redis
+      - worker
+  proxy:
+    build: ./proxy
+    volumes:
+      - static:/mb9k/staticfiles
+      - media:/mb9k/mediafiles
+    ports:
+      - 80:80
+    depends_on:
+      - app
+  worker:
+    build: ./app
+    command: celery -A mb9k worker -l info
+    volumes:
+      - ./app:/mb9k
+      - media:/mb9k/mediafiles
+    depends_on:
+      - postgres
+      - redis
+  rtmp:
+    build: ./rtmp
+    ports: 
+      - 1935:1935
+    depends_on:
+      - app
+  postgres:
+    image: postgres:9.6.19-alpine
+    volumes:
+      - postgres_db:/var/lib/postgresql/data
+    env_file:
+      - ./.env.postgres.prod
+  redis:
+    image: redislabs/redistimeseries:1.4.5
+    volumes:
+      - redis_db
+volumes:
+  postgres_db:
+  redis_db:
+  static:
+  media:

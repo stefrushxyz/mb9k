@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+./streamtest -pv -e copy -r localhost -k $1 adB8RW4I3o4

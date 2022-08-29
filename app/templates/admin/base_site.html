@@ -1,0 +1,171 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrahead %}
+
+  <script>
+
+    window.onload = () => {
+      const searchbars = launch_searchbars('By stream name, owner username, or key');
+
+      if (!!searchbars.detections) {
+        launch_reloader(searchbars.detections, 3);
+      }
+
+      if (!!searchbars.streams) {
+        launch_reloader(searchbars.streams, 10);
+      }
+    };
+
+    const launch_searchbars = (placeholder_text) => {
+      const detections = document.querySelector('body.app-app.model-detection.change-list #searchbar');
+      const streams = document.querySelector('body.app-app.model-stream.change-list #searchbar');
+
+      if (!!detections) {
+        detections.placeholder = placeholder_text;
+      }
+
+      if (!!streams) {
+        streams.placeholder = placeholder_text;
+      }
+
+      return { detections, streams, };
+    };
+
+    const launch_reloader = (searchbar, reload_interval) => {
+      let reload_countdown = reload_interval;
+      let enabled = Boolean(Number(localStorage.getItem('admin_reload_enabled') || 0));
+
+      const create_control_box = () => {
+        /* <!-- Generate this HTML -->
+        <div id="reload_control_box">
+          <label for="reload_control">
+            <input type="checkbox" id="reload_control">
+            <span>Reload in <span id="reload_in">${reload_countdown}</span></span>
+          </label>
+        </div> */
+        let reload_control_box = document.createElement('div');
+        reload_control_box.id = 'reload_control_box';
+
+        let label = document.createElement('label');
+        label.htmlFor = 'reload_control';
+
+        let checkbox = document.createElement('input');
+        checkbox.id = 'reload_control';
+        checkbox.type = 'checkbox';
+        checkbox.checked = enabled;
+        checkbox.onchange = () => {
+          localStorage.setItem('admin_reload_enabled', Number(checkbox.checked));
+        };
+
+        let message = document.createElement('span');
+        message.innerHTML = `Reload in <span id="reload_in">${reload_countdown}</span>`;
+
+        label.appendChild(checkbox);
+        label.appendChild(message);
+        reload_control_box.appendChild(label);
+
+        // Append generated HTML to toolbar
+        const toolbar = searchbar.parentNode.parentNode.parentNode;
+        toolbar.appendChild(reload_control_box);
+      };
+
+      const update_countdown = () => {
+        reload_countdown -= 1;
+        document.getElementById('reload_in').innerHTML = reload_countdown;
+        if (reload_countdown <= 1) {
+          reload_countdown = reload_interval + 1;
+        }
+      };
+
+      const init_reload = () => {
+        const stop_with_checkbox = !document.getElementById('reload_control').checked;
+        const stop_with_searchbar = document.getElementById('searchbar').value === 'stop';
+        if (!stop_with_checkbox && !stop_with_searchbar) {
+          window.location.reload();
+        }
+      };
+
+      create_control_box();
+      setInterval(update_countdown, 1e3);
+      setInterval(init_reload, reload_interval * 1e3)
+    };
+
+  </script>
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Source+Sans+Pro">
+
+  <style>
+
+    body {
+      font-family: "Source Sans Pro", sans-serif;
+    }
+    input[type="text"], textarea, select, .form-row p, td, th {
+      font-family: "Source Sans Pro", sans-serif;
+    }
+    #header, input, form .button, a.addlink, a.deletelink, a.historylink, div.breadcrumbs, .module caption, td.field-key, div.field-key input, #searchbar, #reload_control_box {
+      font-family: "Source Code Pro", monospace;
+    }
+
+    #header {
+      background-color: #111;
+    }
+
+    #branding h1 {
+      font-weight: bold;
+      letter-spacing: 20px;
+    }
+    #branding h1, #branding h1 a:link, #branding h1 a:visited {
+      color: #79aec8;
+    }
+
+    .module h2, .module caption, .inline-group h2 {
+      background-color: #333;
+    }
+
+    div.breadcrumbs {
+      background-color: #333; 
+      color: #ffc;
+    }
+
+    .object-tools a:link, .object-tools a:visited {
+      background-color: #333;
+    }
+    .object-tools a:focus, .object-tools a:hover {
+      background-color: #444;
+    }
+
+    .button.default, input[type="submit"].default, .submit-row input.default {
+      background-color: #111;
+    }
+    .button.default:active, input[type="submit"].default:active, .button.default:focus, input[type="submit"].default:focus, .button.default:hover, input[type="submit"].default:hover {
+      background-color: #222;
+    }
+
+    .button, input[type="submit"], input[type="button"], .submit-row input, a.button {
+      background-color: #333;
+    }
+    .button:active, input[type="submit"]:active, input[type="button"]:active, .button:focus, input[type="submit"]:focus, input[type="button"]:focus, .button:hover, input[type="submit"]:hover, input[type="button"]:hover {
+      background-color: #444;
+    }
+
+    .form-row img {
+      max-width: 100%;
+    }
+    #changelist #toolbar form #searchbar {
+      max-width: 100%;
+    }
+    
+    #reload_control_box {
+      margin: 1rem 0 auto;
+    }
+    #reload_control_box * {
+      cursor: pointer;
+    }
+    #reload_control_box > label > span {
+      padding: 0.5rem;
+    }
+
+  </style>
+
+{% endblock %}
+

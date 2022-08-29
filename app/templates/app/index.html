@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+
+  <meta charset="utf-8">
+  <title>{{ app_name }} v{{ version }}</title>
+
+  <script>
+
+    const reload_interval = 2 * 1000;
+
+    window.onload = () => {
+      const reloader = document.getElementById('reloader');
+
+      reloader.checked = localStorage.getItem('reloader_enabled');
+
+      reloader.onchange = () => {
+          localStorage.setItem('reloader_enabled', reloader.checked);
+      };
+
+      setInterval(() => {
+        if (reloader.checked) {
+          window.location.reload();
+        }
+      }, reload_interval);
+    };
+
+  </script>
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro|Source+Sans+Pro">
+  <style>
+    body {
+      font-family: "Source Sans Pro", sans-serif;
+    }
+    h1, h2, h3 {
+      font-family: "Source Code Pro", monospace;
+    }
+    img {
+      width: 640px;
+      max-width: 100%;
+    }
+    #reloader {
+      position: fixed;
+      top: 5px;
+      right: 5px;
+    }
+    .center {
+      margin: auto;
+      width: 29%;
+      padding: 10px;
+     }
+  </style>
+
+</head>
+
+<body>
+
+  <h1>{{ app_name }} v{{ version }}</h1>
+
+  <h3>Total Detections: {{ detection_count }}</h3>
+  <h3>Mask On: {{ mask_on_count }} ({{ mask_on_rate }}%) | Mask Off: {{ mask_off_count }} ({{ mask_off_rate }}%)</h3>
+  <h3>Live Streams: {{ live_stream_count }} / {{ stream_count }}</h3>
+
+  <input type="checkbox" id="reloader">
+
+{% if latest_detection_image %}
+  <img src="{{ latest_detection_image}}" alt="Latest Detection Image">
+{% endif %}
+
+{% if links %}
+  <h2>Links:</h2>
+  <ul>
+  {% for link in links %}
+    <li>
+      <a href="{{ link.url }}">
+        {{ link.title }}: {{ link.url }}
+      </a>
+    </li>
+  {% endfor %}
+  </ul>
+{% endif %}
+
+<h2>Todos:</h2>
+{% if todos %}
+  <ol>
+  {% for todo in todos %}
+    <li>
+    {% if todo.lengthy %}
+      <b>{% endif %}{{ todo.desc }}{% if todo.lengthy %}</b>
+    {% endif %}
+    </li>
+  {% endfor %}
+  </ol>
+{% else %}
+  <h3>We out</h3>
+{% endif %}
+
+{% if sources %}
+  <h2>Sources:</h2>
+  <ul>
+  {% for source in sources %}
+    <li>
+      <a href="{{ source.url }}">
+        {{ source.title }}: {{ source.url }}
+      </a>
+    </li>
+  {% endfor %}
+  </ul>
+{% endif %}
+  
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+<script type="text/javascript">
+google.charts.load('current', {'packages':['corechart']});
+google.charts.setOnLoadCallback(drawChart);
+
+function drawChart() {
+  var data = google.visualization.arrayToDataTable([
+  ['wearing/not wearing masks', 'People wearing masks'],
+  ['Mask weareres', 1],
+  ['Non-Mask wearers', 0]
+]);
+
+  var options = {'title':'', 'width':550, 'height':400};
+
+  var chart = new google.visualization.PieChart(document.getElementById('piechart'));
+  chart.draw(data, options);
+}
+</script>
+  
+<div id="piechart" class="center"></div>
+
+</body>
+
+</html>

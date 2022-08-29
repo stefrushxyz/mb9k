@@ -1,0 +1,42 @@
+version: "3"
+services:
+  app:
+    build: ./app
+    command: python manage.py runserver 0.0.0.0:8000
+    ports: 
+      - 8000:8000
+    volumes:
+      - ./app:/mb9k
+    env_file:
+      - ./.env.app.dev
+    depends_on:
+      - postgres
+      - redis
+      - worker
+  worker:
+    build: ./app
+    command: celery -A mb9k worker -l info
+    volumes:
+      - ./app:/mb9k
+    depends_on:
+      - postgres
+      - redis
+  rtmp:
+    build: ./rtmp
+    ports: 
+      - 1935:1935
+    depends_on:
+      - app
+  postgres:
+    image: postgres:alpine
+    volumes:
+      - postgres_db:/var/lib/postgresql/data
+    env_file:
+      - ./.env.postgres.dev
+  redis:
+    image: redislabs/redistimeseries
+    volumes:
+      - redis_db
+volumes:
+  postgres_db:
+  redis_db:

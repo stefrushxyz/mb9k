@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+
+scriptname=$0
+fullname=mk9k/$(echo $scriptname | cut -d'/' -f 2)
+allargs="$@"
+
+key=ABCDE01234
+host=localhost
+name=
+usename=false
+tmpdir=tmp/
+quality=veryfast
+encoding=libx264
+persist=false
+verbose=false
+
+usage() {
+    echo "========================================"
+    echo $fullname
+    echo "========================================"
+    echo "Downloads and streams a list of youtube "
+    echo "videos to mk9k rtmp server; identifies  "
+    echo "each youtube video by its url fragment: "
+    echo "https://youtube.com/watch?v=\${frag}    "
+    echo "========================================"
+    echo "Dependencies: ffmpeg, youtube-dl        "
+    echo "========================================"
+    echo "Usage                                   "
+    echo "========================================"
+    echo $scriptname
+    echo " -k key              (default=$key)     "
+    echo " -r rtmp-host        (default=$host)    "
+    echo " -n name             (default=frag)     "
+    echo " -t temp-dir         (default=$tmpdir)  "
+    echo " -q stream-quality   (default=$quality) "
+    echo " -e stream-encoding  (default=$encoding)"
+    echo " -p persist          (default=$persist) "
+    echo " -v verbose          (default=$verbose) "
+    echo " frag0 frag1 frag2 ...                  "
+    echo "========================================"
+}
+
+if [[ -z "$allargs" ]]
+then
+    usage && exit 1
+fi
+
+while getopts "k:r:n:t:q:e:pvh" opt
+do
+    case "$opt"
+    in
+        k) key="$OPTARG" ;;
+        r) host="$OPTARG" ;;
+        n) name="$OPTARG" && usename=true ;;
+        t) tmpdir="$OPTARG" ;;
+        q) quality="$OPTARG" ;;
+        e) encoding="$OPTARG" ;;
+        p) persist=true ;;
+        v) verbose=true ;;
+        h) usage && exit 0 ;;
+        [?]) usage && exit 1 ;;
+    esac
+done
+
+skipflag=false
+repeatfor="-1"
+fragcount=0
+
+stlog() {
+    if [[ "$verbose" == "true" ]]
+    then
+        echo "[$fullname] $1"
+    fi
+}
+
+stprocess() {
+    stlog "Processing frag $1..."
+
+    frag=$(echo $1 | cut -d'=' -f 2)
+    filename=$1.mp4
+    if [[ "$usename" == "true" ]]
+    then
+        filename=$name.mp4
+    fi
+    fullpath=$tmpdir$filename
+
+    stdownload $frag $fullpath
+    ststream $fullpath $host $key
+    stremove $fullpath
+
+    repeatfor="-1"
+    fragcount+=1
+}
+
+stdownload() {
+    if [[ -f "$2" ]]
+    then
+        return
+    fi
+
+    youtube=https://youtube.com/watch?v=$1
+    stlog "Downloading $youtube to $2..."
+    youtube-dl $1 -f mp4 -o $2
+}
+
+ststream() {
+    rtmp=rtmp://$2/live/$3
+    stlog "Streaming $1 to $rtmp..."
+    ffmpeg -re \
+        -stream_loop $repeatfor \
+        -i $1 \
+        -preset $quality \
+        -c:v $encoding \
+        -c:a aac -b:a 128k \
+        -f flv $rtmp
+}
+# -c:v libx264 -b:v 2M -maxrate 2M -bufsize 1M \
+
+stremove() {
+    if [[ "$persist" != "false" ]]
+    then
+        return
+    fi
+
+    stlog "Removing $1..."
+    rm $1
+}
+
+stlog "Starting..."
+
+stlog "Creating $tmpdir..."
+mkdir -p $tmpdir
+
+for frag in $allargs
+do
+    if [[ "$skipflag" == "true" ]]
+    then
+        skipflag=false
+        continue
+    fi
+
+    if [[ "$frag" =~ ^-[krntqe]{1}$ ]]
+    then
+        skipflag=true
+        continue
+    fi
+
+    if [[ "$frag" =~ ^-[a-zA-Z]*$ ]]
+    then
+        continue
+    fi
+
+    if [[ "$frag" =~ ^[0-9]{,10}$ ]]
+    then
+        repeatfor="$frag"
+        continue
+    fi
+
+    stprocess $frag
+done
+
+if [[ "$usename" == "true" && $fragcount == 0 ]]
+then
+    stprocess $name
+fi
+
+stlog "Exiting..."
+
